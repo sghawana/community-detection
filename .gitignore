@@ -1,0 +1,19 @@
+# Ignore Mac system files
+.DS_Store
+
+# Ignore Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore Python bytecode files
+__pycache__/
+*.pyc
+
+# Ignore virtual environment directories
+venv/
+env/
+
+# Ignore the rough notebook
+rough.ipynb
+
+#dataset
+data
