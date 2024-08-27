@@ -2,29 +2,169 @@ import gzip
 from collections import deque, defaultdict
 from tqdm import tqdm
 import numpy as np
-
-def import_wiki_vote_data(path):
-    edges = []
-    with gzip.open(path, 'rt', encoding='utf-8') as file:
-        for line in file:
-            if line.startswith('#'):
-                continue
-            node1, node2 = map(int, line.strip().split())
-            edges.append((node1, node2))
-    return edges
+import matplotlib.pyplot as plt
+from scipy.cluster.hierarchy import dendrogram
 
 
-def build_wiki_graph(edge_list):
-    uniq_nodes = set()
-    for a,b in edge_list:
-        uniq_nodes.add(a)
-        uniq_nodes.add(b)
-    graph = {node: [] for node in uniq_nodes}
-    for a, b in edge_list:
-        graph[a].append(b)
+#------------------------DATASET AND GRAPH HANDELING--------------------------------------------
+
+def build_graph(edge_list):
+    graph = {}
+    added_edges = set()
+    for u, v in edge_list:
+        edge = tuple(sorted((u, v)))
+        
+        if edge not in added_edges:
+            added_edges.add(edge)
+            
+            if u not in graph:
+                graph[u] = []
+            if v not in graph:
+                graph[v] = []
+            
+            graph[u].append(v)
+            graph[v].append(u)
     return graph
 
-# -------------------------------- Louvain Functions ---------------------------------------------
+def map_node_ids(graph):
+    unique_ids = sorted(graph.keys())
+    id_mapping = {old_id: new_id for new_id, old_id in enumerate(unique_ids)}
+    new_graph = {}
+    for old_id, neighbors in graph.items():
+        new_id = id_mapping[old_id]
+        new_graph[new_id] = [id_mapping[neighbor] for neighbor in neighbors]
+    
+    return new_graph, id_mapping
+
+def revert_node_ids(new_graph, original_id_mapping):
+    
+    reverse_mapping = {new_id: old_id for old_id, new_id in original_id_mapping.items()}
+    original_graph = {}
+    
+    for new_id, neighbors in new_graph.items():
+        old_id = reverse_mapping[new_id]
+        original_graph[old_id] = [reverse_mapping[neighbor] for neighbor in neighbors]
+    
+    return original_graph
+
+
+# --------------------------------GIRVAN FUNCTIONS---------------------------------------------
+
+def get_edges(g):
+    edge_list = []
+    for node in g:
+        for neighbor in g[node]:
+            if node < neighbor:
+                edge_list.append((node, neighbor))
+    return edge_list
+
+
+def asq_comp(graph, start_node, visited, comm):
+     q = deque([start_node])
+     while q:
+          node = q.popleft()
+          if not visited[node]:
+               visited[node] = True
+               for v in graph[node]:
+                    if not visited[v]:
+                         q.append(v)
+                    comm[v] = min(v, start_node)
+
+def assign_community(graph):
+     visited = {node: False for node in graph}
+     comm = {node: node for node in graph}
+     for node in graph:
+          if not visited[node]:
+               asq_comp(graph, node, visited, comm)
+     return comm
+ 
+ 
+                     
+def bfs(graph, start_node, bw, undir=True):
+     order = []
+     parent = {node: set() for node in graph} 
+     visited = {node: False for node in graph} 
+     dis = {node: float('inf') for node in graph} 
+     num_paths = {node: 0 for node in graph} 
+     info = {node: 1 for node in graph}
+     dis[start_node] = 0; parent[start_node] = -1; num_paths[start_node] = 1
+     q = deque([start_node])
+     while q:
+          node = q.popleft()
+          if not visited[node]:
+               visited[node] = True
+               order.append(node)
+
+          for v in graph[node]:
+               if dis[v] == float('inf'):  
+                    dis[v] = dis[node] + 1
+                    q.append(v)
+               
+               if dis[v] == dis[node] + 1:  
+                    num_paths[v] += num_paths[node]
+                    parent[v].add(node)
+     
+     for node in reversed(order):
+          if parent[node] != -1:
+               for p in parent[node]:
+                    v1 = min(node, p); v2 = max(node, p)
+                    if not undir:
+                         bw[(v1, v2)] += info[node] * (num_paths[p]/num_paths[node])
+                    else:
+                         bw[(v1, v2)] += (info[node] * (num_paths[p]/num_paths[node])/2)
+                    info[p] += info[node] * (num_paths[p]/num_paths[node])
+
+def edge_betweeness(graph):
+    edges = get_edges(graph)
+    bw = {e: 0 for e in edges}
+    for node in tqdm(graph, desc="Processing nodes"):
+        bfs(graph, node, bw)
+    return bw
+
+
+def max_edges(betweeness, delta = 0.01):
+    max_edges = []
+    max_betweeness = max(betweeness.values())
+    for edge in betweeness:
+        if abs(betweeness[edge] - max_betweeness) <= delta:
+            max_edges.append(edge)
+    return max_edges
+
+
+def remove_edge(graph, edgelist):
+    new_graph = {node: neighbors[:] for node, neighbors in graph.items()}
+    for edge in edgelist:
+        u, v = edge
+        if u in new_graph and v in new_graph[u]:
+            new_graph[u].remove(v)
+        if v in new_graph and u in new_graph[v]:
+            new_graph[v].remove(u)
+    return new_graph
+
+
+def modularity(graph, communities):
+    m = sum(len(neighbors) for neighbors in graph.values()) / 2
+    degrees = {node: len(neighbors) for node, neighbors in graph.items()}
+    modularity = 0
+
+    for node_i in graph:
+        for node_j in graph:
+            if communities[node_i] == communities[node_j]:
+                A_ij = 1 if node_j in graph[node_i] else 0
+                modularity += A_ij - (degrees[node_i] * degrees[node_j] / (2 * m))
+    
+    modularity /= (2 * m)
+    return modularity
+
+
+def dict_to_np(dictionary):
+    n = len(dictionary)
+    numpy_array = np.zeros((n, 1))
+    for key, value in dictionary.items():
+        numpy_array[key] = value
+    return numpy_array
+
+# -------------------------------- LOUVAIN FUNCTIONS---------------------------------------------
 
 def initialize_partition(graph):
     return {node: node for node in graph}
@@ -105,7 +245,7 @@ def coalesce_graph(graph, partition):
     return dict(new_graph), node_to_community
 
 
-# -------------------------------- Dendogram Functions ---------------------------------------------
+# --------------------------------DENDOGRAM FUNCTIONS---------------------------------------------
 
 
 def hamming_distance(x, y):
