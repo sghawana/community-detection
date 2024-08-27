@@ -1,4 +1,5 @@
 import numpy as np
+import csv
 from collections import defaultdict
 from tqdm import tqdm
 import copy
@@ -16,10 +17,17 @@ def import_wiki_vote_data(path):
 
 
 def import_lastfm_asia_data(path):
-    ...
+    edge_list = []
+    with open(path, 'r') as file:
+        reader = csv.reader(file)
+        next(reader)  
+        for row in reader:
+            node1, node2 = int(row[0]), int(row[1])
+            edge_list.append((node1, node2))
+    return edge_list
 
 
-def girvan_newman_one_level(graph):
+def girvan_newman_one_level(graph, status=False):
     edge_list = get_edges(graph)
     if not edge_list:
         return None, None
@@ -27,7 +35,8 @@ def girvan_newman_one_level(graph):
     rem_edges= max_edges(bw, delta = 0.0001)
     new_graph = remove_edge(graph, rem_edges)
     new_comm = assign_community(new_graph)
-    print('Current Partition:', new_comm, '\n')   
+    if status:
+        print('Current Partition:', new_comm, '\n')   
     return new_graph, new_comm
 
 def girvan_newman(graph):
@@ -37,6 +46,7 @@ def girvan_newman(graph):
     curr_comm = assign_community(curr)
     curr_mod = modularity(og_graph, curr_comm)
     
+    count = 0
     while True:   
         next_graph, next_comm = girvan_newman_one_level(curr)
         next_mod = modularity(og_graph, next_comm)
@@ -49,12 +59,16 @@ def girvan_newman(graph):
             curr_mod = next_mod
             curr_comm = next_comm
             community_matrix = np.hstack((community_matrix, dict_to_np(curr_comm)))
+        
+        count += 1
+        if count > 50:
+            break
     
-    print('Community Matrix: ', community_matrix )
+    print('Community Matrix: ', community_matrix, '\n' )
     return curr, community_matrix
 
 
-def visualise_dendogram(community_mat):
+def visualise_dendogram(community_mat, name):
     Z = calculate_Z(community_mat) 
     plt.figure(figsize=(10, 7))
     dendrogram(Z, labels=np.arange(community_mat.shape[0]))
@@ -62,7 +76,7 @@ def visualise_dendogram(community_mat):
     plt.title("Dendrogram of Girvan-Newman Communities")
     plt.xlabel("Node ID")
     plt.ylabel("Distance")
-    plt.savefig("dendrogram.png")
+    plt.savefig(f"{name}_dendrogram.png")
     plt.show()
 
 
