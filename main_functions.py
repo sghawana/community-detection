@@ -81,29 +81,26 @@ def visualise_dendogram(community_mat, name):
 
 
 def louvain_one_iter(graph):
-    with tqdm(total=4, desc="Louvain Algorithm Progress") as pbar:
-        pbar.set_description("First Phase")
-        partition = louvain_phase_one(graph)
-        pbar.update(1)
+    
+    print('Starting First Phase')
+    partition = louvain_phase_one(graph)
+    print('First Phase Complete')
+    print('No of communities after first phase:', len(set(partition.values())))
 
-        pbar.set_description("Coalescing Graph")
-        coalesced_graph, node_mapping = coalesce_graph(graph, partition)
-        pbar.update(1)
+    print('Starting Second Phase')
+    coalesced_graph, node_mapping = coalesce_graph(graph, partition)
+    coalesced_partition = louvain_phase_one(coalesced_graph)
 
-        pbar.set_description("Second Phase")
-        coalesced_partition = louvain_phase_one(coalesced_graph)
-        pbar.update(1)
-
-        pbar.set_description("Finalizing Partition")
-        final_partition = {}
-        for coalesced_node, new_community in coalesced_partition.items():
-            for original_node in node_mapping[coalesced_node]:
-                final_partition[original_node] = new_community
+    final_partition = {}
+    for coalesced_node, new_community in coalesced_partition.items():
+        for original_node in node_mapping[coalesced_node]:
+            final_partition[original_node] = new_community
+    
+    n = len(graph)
+    graph_partition = np.zeros(n, dtype=int)
+    for node, community in final_partition.items():
+        graph_partition[node] = community
         
-        n = len(graph)
-        graph_partition = np.zeros(n, dtype=int)
-        for node, community in final_partition.items():
-            graph_partition[node] = community
-        pbar.update(1)
     print('Current Partition:', graph_partition, '\n')
+    print('Final number of communities:', len(np.unique(graph_partition)))
     return graph_partition

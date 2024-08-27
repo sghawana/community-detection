@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # This is for question no. 4
     # run one iteration of louvain algorithm and return the resulting graph_partition. The description of
     # graph_partition vector is as before. Show the resulting communities after one iteration of the algorithm.
-    graph_partition_louvain_wiki = louvain_one_iter(new_graph_wiki)
+    #graph_partition_louvain_wiki = louvain_one_iter(new_graph_wiki)
 
 
     ############ Answer qn 1-4 for bitcoin data #################################################
@@ -72,10 +72,11 @@ if __name__ == "__main__":
 
     # Question 2
     community_mat_lastfm = girvan_newman(new_graph_lastfm)
+    
 
     # Question 3
     visualise_dendogram(community_mat_lastfm, 'lastfm')
 
     # Question 4
-    graph_partition_louvain_lastfm = louvain_one_iter(new_graph_lastfm)
+    #graph_partition_louvain_lastfm = louvain_one_iter(new_graph_lastfm)
 
