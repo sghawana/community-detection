@@ -1,5 +1,5 @@
 import numpy as np
-from functions import  import_wiki_vote_data, Girvan_Newman_one_level, Girvan_Newman, visualise_dendogram, louvain_one_iter, import_lastfm_asia_data
+from helper_functions import  import_wiki_vote_data, Girvan_Newman_one_level, Girvan_Newman, visualise_dendogram, louvain_one_iter, import_lastfm_asia_data
 
 if __name__ == "__main__":
 
