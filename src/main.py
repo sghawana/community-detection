@@ -10,7 +10,7 @@ if __name__ == "__main__":
     # is an edge connecting i->j (entry in the first column is node i, 
     # entry in the second column is node j)
     # Each row represents a unique edge. Hence, any repetitions in data must be cleaned away.
-    nodes_connectivity_list_wiki = import_wiki_vote_data("./data/wiki-Vote.txt.gz")
+    nodes_connectivity_list_wiki = import_wiki_vote_data("../data/wiki-Vote.txt.gz")
     
     # This functions build a undirected graph from edge list
     graph_wiki = build_graph(nodes_connectivity_list_wiki)
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # is an edge connecting i<->j (entry in the first column is node i, 
     # entry in the second column is node j)
     # Each row represents a unique edge. Hence, any repetitions in data must be cleaned away.
-    nodes_connectivity_list_lastfm = import_lastfm_asia_data("data/lasftm_asia/lastfm_asia_edges.csv")
+    nodes_connectivity_list_lastfm = import_lastfm_asia_data("../data/lasftm_asia/lastfm_asia_edges.csv")
     
     graph_lastfm = build_graph(nodes_connectivity_list_lastfm)
     
